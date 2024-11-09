@@ -1,11 +1,13 @@
-const gridSize = 10;
+const gridSize = 5;
 
-const canvasSize = 500;
+const canvasSize = 800;
 const cellSize = canvasSize / gridSize;
 
 const colorBase = Math.floor(Math.random() * 360);
 const colorLight = colorBase;
 const colorDark = colorBase + 140;
+
+let cells; // Make cells global
 
 class Cell {
   constructor(posX, posY, size, colorFront, colorBack, rotation) {
@@ -48,17 +50,34 @@ function setup() {
   createCanvas(canvasSize, canvasSize);
   background(0);
 
-  let lastRotation = 0;
-  const maxRotation = 2;
-  for (let i = 0; i < gridSize; i += 1) {
-    for (let j = 0; j < gridSize; j += 1) {
+  // Update cells initialization to use global variable
+  cells = Array(gridSize).fill().map(() => Array(gridSize));
 
-      const isDark = true //random(1) > 0.5;
+  // First pass: assign colors
+  for (let i = 0; i < gridSize; i++) {
+    for (let j = 0; j < gridSize; j++) {
+      const isDark = random(1) > 0.5;
       const randomFront = isDark ? colorDark : colorLight;
       const randomBack = isDark ? colorLight : colorDark;
-      const rotation = lastRotation * 90;
-      lastRotation = (lastRotation + 1) % maxRotation;
-      const cell = new Cell(i * cellSize, j * cellSize, cellSize, randomFront, randomBack, rotation);
+
+      cells[i][j] = new Cell(
+        i * cellSize,
+        j * cellSize,
+        cellSize,
+        randomFront,
+        randomBack,
+        0 // temporary rotation
+      );
+    }
+  }
+
+  // Second pass: assign rotations
+  for (let i = 0; i < gridSize; i++) {
+    for (let j = 0; j < gridSize; j++) {
+      const cell = cells[i][j];
+      const neighbors = getNeighbors(cells, i, j);
+      const rotation = determineRotation(cell, neighbors, cells[i][j - 1]); // Pass left neighbor for initial reference
+      cell.rotation = rotation * 90;
       cell.draw();
     }
   }
@@ -67,6 +86,7 @@ function setup() {
   const downloadButton = createButton('Download Pattern');
   downloadButton.position(10, canvasSize + 10);
   downloadButton.mousePressed(downloadCanvas);
+
 }
 
 function downloadCanvas() {
@@ -80,5 +100,53 @@ function fillHsluv(h, s, l) {
 function strokeHsluv(h, s, l) {
   var rgb = hsluv.hsluvToRgb([h, s, l]);
   stroke(rgb[0] * 255, rgb[1] * 255, rgb[2] * 255);
+}
+
+function getNeighbors(cells, i, j) {
+  return {
+    top: j > 0 ? cells[i][j - 1] : null,
+    right: i < gridSize - 1 ? cells[i + 1][j] : null,
+    bottom: j < gridSize - 1 ? cells[i][j + 1] : null,
+    left: i > 0 ? cells[i - 1][j] : null
+  };
+}
+
+function determineRotation(cell, neighbors, leftNeighbor) {
+  const hasConflictingNeighbor = Object.values(neighbors).some(neighbor =>
+    neighbor && neighbor.colorFront === cell.colorFront
+  );
+
+  if (!hasConflictingNeighbor) {
+    // If no same-color neighbors, any rotation is fine
+    return Math.floor(random(2));
+  }
+
+  // If we have same-color neighbors, we need opposite rotation
+  // Use left neighbor as reference if it exists
+  if (leftNeighbor && leftNeighbor.colorFront === cell.colorFront) {
+    return (Math.floor(leftNeighbor.rotation / 90) + 1) % 2;
+  }
+
+  // If no left neighbor or different color, start with random rotation
+  return Math.floor(random(2));
+}
+
+function mousePressed() {
+  if (mouseX < 0 || mouseX > canvasSize || mouseY < 0 || mouseY > canvasSize) return;
+
+  // Calculate which cell was clicked
+  const i = Math.floor(mouseX / cellSize);
+  const j = Math.floor(mouseY / cellSize);
+
+  // Rotate the clicked cell
+  cells[i][j].rotation = (cells[i][j].rotation + 90) % 360;
+
+  // Redraw the canvas
+  background(0);
+  for (let x = 0; x < gridSize; x++) {
+    for (let y = 0; y < gridSize; y++) {
+      cells[x][y].draw();
+    }
+  }
 }
 
