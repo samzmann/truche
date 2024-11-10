@@ -1,4 +1,4 @@
-const gridSize = 30;
+const gridSize = 10;
 const gutterSize = 0;
 
 const canvasSize = 800;
@@ -65,8 +65,8 @@ function setup() {
         i * cellSize + gutterSize,
         j * cellSize + gutterSize,
         cellSize - gutterSize * 2,
-        0,
-        images[0]
+        Math.floor(Math.random() * 4) * 90,
+        images[Math.floor(Math.random() * images.length)]
       );
       cells[i][j].draw();
     }
@@ -106,6 +106,25 @@ function strokeHsluv(h, s, l) {
   stroke(rgb[0] * 255, rgb[1] * 255, rgb[2] * 255);
 }
 
+
+function mouseDragged() {
+  if (mouseX < 0 || mouseX > canvasSize || mouseY < 0 || mouseY > canvasSize) return;
+
+  // Calculate which cell was clicked
+  const i = Math.floor(mouseX / cellSize);
+  const j = Math.floor(mouseY / cellSize);
+
+  cells[i][j].rotation = (cells[i][j].rotation + 90) % 360;
+
+  // Redraw the canvas
+  background(0);
+  for (let x = 0; x < gridSize; x++) {
+    for (let y = 0; y < gridSize; y++) {
+      cells[x][y].draw();
+    }
+  }
+}
+
 function mousePressed() {
   if (mouseX < 0 || mouseX > canvasSize || mouseY < 0 || mouseY > canvasSize) return;
 
@@ -113,12 +132,8 @@ function mousePressed() {
   const i = Math.floor(mouseX / cellSize);
   const j = Math.floor(mouseY / cellSize);
 
-  // Rotate the clicked cell
-  if (isRotating) {
-    cells[i][j].rotation = (cells[i][j].rotation + 90) % 360;
-  } else {
-    cells[i][j].imageObject = images[activeImageIndex];
-  }
+
+  cells[i][j].imageObject = images[activeImageIndex];
 
   // Redraw the canvas
   background(0);
