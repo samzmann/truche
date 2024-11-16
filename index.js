@@ -1,11 +1,16 @@
-const gridSize = 10;
-const gutterSize = 0;
+const columns = 5;
+const rows = 6;
+const gutterSize = 1;
 
-const canvasSize = 800;
-const cellSize = canvasSize / gridSize;
-let cells; // Make cells global
+const cellSize = 100;
+const canvasSize = {
+  width: columns * cellSize,
+  height: rows * cellSize
+};
+let cells;
 
 let isRotating = false;
+let isDeleting = false;
 
 class Cell {
   constructor(posX, posY, size, rotation, imageObject) {
@@ -21,7 +26,12 @@ class Cell {
     translate(this.posX + this.size / 2, this.posY + this.size / 2); // Move to center of cell
     rotate(radians(this.rotation)); // Apply rotation
     // Draw image centered at origin
-    image(this.imageObject, -this.size / 2, -this.size / 2, this.size, this.size);
+    if (this.imageObject) {
+      image(this.imageObject, -this.size / 2, -this.size / 2, this.size, this.size);
+    } else {
+      rect(-this.size / 2, -this.size / 2, this.size, this.size);
+    }
+
     pop(); // Restore the transformation state
   }
 }
@@ -75,39 +85,38 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(canvasSize, canvasSize);
-  background(255);
+  createCanvas(canvasSize.width, canvasSize.height);
+  background(0);
 
-  // Update cells initialization to use global variable
-  cells = Array(gridSize).fill().map(() => Array(gridSize));
+  // Update cells initialization for 2D array with columns and rows
+  cells = Array(columns).fill().map(() => Array(rows));
 
   // First pass: assign colors
-  for (let i = 0; i < gridSize; i++) {
-    for (let j = 0; j < gridSize; j++) {
-
+  for (let i = 0; i < columns; i++) {
+    for (let j = 0; j < rows; j++) {
       cells[i][j] = new Cell(
         i * cellSize + gutterSize,
         j * cellSize + gutterSize,
         cellSize - gutterSize * 2,
-        Math.floor(Math.random() * 4) * 90,
-        images[Math.floor(Math.random() * images.length)]
+        0,
+        null
       );
       cells[i][j].draw();
     }
   }
 
-  // Add download button
+  // Update download button position
   const downloadButton = createButton('Download Pattern');
-  downloadButton.position(10, canvasSize + 10);
+  downloadButton.position(10, canvasSize.height + 10);
   downloadButton.mousePressed(downloadCanvas);
 
-  // Add buttons for each image
+  // Update image buttons position
   assets.forEach((asset, index) => {
     const img = createImg(asset, '');
-    img.position(10 + (index * 100), canvasSize + 10);
+    img.position(10 + (index * 100), canvasSize.height + 10);
     img.size(80, 80);
     const imageButton = createButton(`➡️`);
-    imageButton.position(10 + (index * 100), canvasSize + 40);
+    imageButton.position(10 + (index * 100), canvasSize.height + 40);
     imageButton.mousePressed(() => {
       console.log(asset);
       activeImageIndex = index;
@@ -130,39 +139,27 @@ function strokeHsluv(h, s, l) {
   stroke(rgb[0] * 255, rgb[1] * 255, rgb[2] * 255);
 }
 
-
-function mouseDragged() {
-  if (mouseX < 0 || mouseX > canvasSize || mouseY < 0 || mouseY > canvasSize) return;
-
-  // Calculate which cell was clicked
-  const i = Math.floor(mouseX / cellSize);
-  const j = Math.floor(mouseY / cellSize);
-
-  cells[i][j].rotation = (cells[i][j].rotation + 90) % 360;
-
-  // Redraw the canvas
-  background(0);
-  for (let x = 0; x < gridSize; x++) {
-    for (let y = 0; y < gridSize; y++) {
-      cells[x][y].draw();
-    }
-  }
-}
-
 function mousePressed() {
-  if (mouseX < 0 || mouseX > canvasSize || mouseY < 0 || mouseY > canvasSize) return;
+  if (mouseX < 0 || mouseX > canvasSize.width || mouseY < 0 || mouseY > canvasSize.height) return;
 
-  // Calculate which cell was clicked
   const i = Math.floor(mouseX / cellSize);
   const j = Math.floor(mouseY / cellSize);
 
-
-  cells[i][j].imageObject = images[activeImageIndex];
+  if (isDeleting) {
+    cells[i][j].imageObject = null;
+    cells[i][j].rotation = 0;
+  }
+  else if (isRotating) {
+    cells[i][j].rotation = (cells[i][j].rotation + 90) % 360;
+  }
+  else {
+    cells[i][j].imageObject = images[activeImageIndex];
+  }
 
   // Redraw the canvas
   background(0);
-  for (let x = 0; x < gridSize; x++) {
-    for (let y = 0; y < gridSize; y++) {
+  for (let x = 0; x < columns; x++) {
+    for (let y = 0; y < rows; y++) {
       cells[x][y].draw();
     }
   }
@@ -172,11 +169,17 @@ function keyPressed() {
   if (key === 'r' || key === 'R') {
     isRotating = true;
   }
+  if (key === 'd' || key === 'D') {
+    isDeleting = true;
+  }
 }
 
 function keyReleased() {
   if (key === 'r' || key === 'R') {
     isRotating = false;
+  }
+  if (key === 'd' || key === 'D') {
+    isDeleting = false;
   }
 }
 
