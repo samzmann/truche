@@ -26,16 +26,40 @@ class Cell {
   }
 }
 
+const oneToNone = [
+  'assets/set_2/OneToNone 1.png',
+  'assets/set_2/OneToNone 2.png',
+  'assets/set_2/OneToNone 3.png'
+]
+const oneToOne = [
+  'assets/set_2/OneToOne 1.png',
+  'assets/set_2/OneToOne 2.png',
+  'assets/set_2/OneToOne 3.png',
+  'assets/set_2/OneToOne 4.png',
+  'assets/set_2/OneToOne 5.png'
+]
+const oneToOneAngled = [
+  'assets/set_2/OneToOneAngled 1.png',
+  'assets/set_2/OneToOneAngled 2.png',
+  'assets/set_2/OneToOneAngled 3.png'
+]
+const oneToOneTwo = [
+  'assets/set_2/OneToTwo 1.png',
+  'assets/set_2/OneToTwo 2.png'
+]
+const oneToOneThree = [
+  'assets/set_2/OneToThree 1.png',
+  'assets/set_2/OneToThree 2.png',
+  'assets/set_2/OneToThree 3.png'
+]
+
 
 const assets = [
-  'assets/IMG_4714.JPG',
-  'assets/IMG_4715.JPG',
-  'assets/IMG_4716.JPG',
-  'assets/IMG_4717.JPG',
-  'assets/IMG_4718.JPG',
-  'assets/IMG_4719.JPG',
-  'assets/IMG_4720.JPG',
-  'assets/IMG_4721.JPG'
+  ...oneToNone,
+  ...oneToOne,
+  ...oneToOneAngled,
+  ...oneToOneTwo,
+  ...oneToOneThree
 ];
 
 const images = [];
