@@ -12,6 +12,9 @@ let cells;
 let isRotating = false;
 let isDeleting = false;
 
+const uiOriginX = canvasSize.width + 50;
+const uiOriginY = 50;
+
 class Cell {
   constructor(posX, posY, size, rotation, imageObject) {
     this.posX = posX;
@@ -84,9 +87,77 @@ function preload() {
   }
 }
 
+function drawUI() {
+  // Download button remains at fixed position
+  const downloadButton = createButton('Download Pattern');
+  downloadButton.position(10, canvasSize.height + 10);
+  downloadButton.mousePressed(downloadCanvas);
+
+  // Define sections with their titles and corresponding arrays
+  const sections = [
+    { title: 'One to None', assets: oneToNone },
+    { title: 'One to One', assets: oneToOne },
+    { title: 'One to One Angled', assets: oneToOneAngled },
+    { title: 'One to Two', assets: oneToOneTwo },
+    { title: 'One to Three', assets: oneToOneThree }
+  ];
+
+  let currentY = uiOriginY;
+  const itemsPerRow = 5; // Adjust this value to change number of items per row
+  const itemWidth = 100;
+  const itemHeight = 120;
+  const sectionSpacing = 20; // Space between sections
+
+  sections.forEach(section => {
+    // Create section header
+    const header = createElement('h3', section.title);
+    header.position(uiOriginX, currentY);
+    header.style('color', 'black');
+    header.style('font-family', 'Arial, sans-serif');
+    currentY += 50; // Space after header
+
+    // Create grid of images and buttons for this section
+    section.assets.forEach((asset, index) => {
+      const row = Math.floor(index / itemsPerRow);
+      const col = index % itemsPerRow;
+
+      const xPos = uiOriginX + (col * itemWidth);
+      const yPos = currentY + (row * itemHeight);
+
+      // Create image
+      const img = createImg(asset, '');
+      img.position(xPos, yPos);
+      img.size(80, 80);
+
+      // Create button below image
+      const imageButton = createButton('➡️');
+      imageButton.position(xPos, yPos);
+      imageButton.mousePressed(() => {
+        // Find the global index in the combined assets array
+        activeImageIndex = assets.indexOf(asset);
+      });
+
+      // Add count text element
+      const countElement = createElement('p', '0');
+      countElement.position(xPos, yPos + 85); // Position below the button
+      countElement.style('margin', '0');
+      countElement.style('text-align', 'center');
+      countElement.style('width', '80px');
+      countElement.style('font-size', '20px');
+      countElement.style('font-family', 'Arial, sans-serif');
+      countElement.id('count-' + assets.indexOf(asset)); // Add unique ID for updating later
+    });
+
+    // Update currentY for next section
+    const rowsInSection = Math.ceil(section.assets.length / itemsPerRow);
+    currentY += (rowsInSection * itemHeight) + sectionSpacing;
+  });
+}
+
 function setup() {
   createCanvas(canvasSize.width, canvasSize.height);
-  background(0);
+  background(220);
+  noStroke()
 
   // Update cells initialization for 2D array with columns and rows
   cells = Array(columns).fill().map(() => Array(rows));
@@ -105,25 +176,7 @@ function setup() {
     }
   }
 
-  // Update download button position
-  const downloadButton = createButton('Download Pattern');
-  downloadButton.position(10, canvasSize.height + 10);
-  downloadButton.mousePressed(downloadCanvas);
-
-  // Update image buttons position
-  assets.forEach((asset, index) => {
-    const img = createImg(asset, '');
-    img.position(10 + (index * 100), canvasSize.height + 10);
-    img.size(80, 80);
-    const imageButton = createButton(`➡️`);
-    imageButton.position(10 + (index * 100), canvasSize.height + 40);
-    imageButton.mousePressed(() => {
-      console.log(asset);
-      activeImageIndex = index;
-    });
-  });
-
-
+  drawUI();
 }
 
 function downloadCanvas() {
@@ -137,6 +190,31 @@ function fillHsluv(h, s, l) {
 function strokeHsluv(h, s, l) {
   var rgb = hsluv.hsluvToRgb([h, s, l]);
   stroke(rgb[0] * 255, rgb[1] * 255, rgb[2] * 255);
+}
+
+function updateImageCounts() {
+  // Reset all counts
+  const counts = new Array(assets.length).fill(0);
+
+  // Count occurrences
+  for (let x = 0; x < columns; x++) {
+    for (let y = 0; y < rows; y++) {
+      if (cells[x][y].imageObject) {
+        const index = images.indexOf(cells[x][y].imageObject);
+        if (index !== -1) {
+          counts[index]++;
+        }
+      }
+    }
+  }
+
+  // Update count elements
+  counts.forEach((count, index) => {
+    const countElement = select('#count-' + index);
+    if (countElement) {
+      countElement.html(count);
+    }
+  });
 }
 
 function mousePressed() {
@@ -157,12 +235,15 @@ function mousePressed() {
   }
 
   // Redraw the canvas
-  background(0);
+  background(220);
   for (let x = 0; x < columns; x++) {
     for (let y = 0; y < rows; y++) {
       cells[x][y].draw();
     }
   }
+
+  // Update the counts
+  updateImageCounts();
 }
 
 function keyPressed() {
