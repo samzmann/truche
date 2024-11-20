@@ -1,16 +1,19 @@
-const columns = 8;
-const rows = 8;
+const columns = 4;
+const rows = 5;
 const gutterSize = 1;
 
-const cellSize = 100;
+const cellSize = 150;
+
 const canvasSize = {
-  width: columns * cellSize,
+  width: columns * 2 * cellSize + 50,
   height: rows * cellSize
 };
 let cells;
+let backCells;
 
 let isRotating = false;
 let isDeleting = false;
+let isFlipping = false;
 
 const uiOriginX = canvasSize.width + 50;
 const uiOriginY = 0;
@@ -75,6 +78,29 @@ const oneToOneThree = [
   'assets/set_2/OneToThree 2.png',
   'assets/set_2/OneToThree 3.png'
 ]
+
+const tiles = {
+  otn_01: { id: "otn_01", type: "One to None", imageFile: "assets/set_2/OneToNone 1.png" },
+  otn_02: { id: "otn_02", type: "One to None", imageFile: "assets/set_2/OneToNone 2.png" },
+  otn_03: { id: "otn_03", type: "One to None", imageFile: "assets/set_2/OneToNone 3.png" },
+  oto_01: { id: "oto_01", type: "One to One", imageFile: "assets/set_2/OneToOne 1.png" },
+  oto_02: { id: "oto_02", type: "One to One", imageFile: "assets/set_2/OneToOne 2.png" },
+  oto_03: { id: "oto_03", type: "One to One", imageFile: "assets/set_2/OneToOne 3.png" },
+  oto_04: { id: "oto_04", type: "One to One", imageFile: "assets/set_2/OneToOne 4.png" },
+  oto_05: { id: "oto_05", type: "One to One", imageFile: "assets/set_2/OneToOne 5.png" },
+  otoa_01: { id: "otoa_01", type: "One to One Angled", imageFile: "assets/set_2/OneToOneAngled 1.png" },
+  otoa_02: { id: "otoa_02", type: "One to One Angled", imageFile: "assets/set_2/OneToOneAngled 2.png" },
+  otoa_03: { id: "otoa_03", type: "One to One Angled", imageFile: "assets/set_2/OneToOneAngled 3.png" },
+  otw_01: { id: "otw_01", type: "One to Two", imageFile: "assets/set_2/OneToTwo 1.png" },
+  otw_02: { id: "otw_02", type: "One to Two", imageFile: "assets/set_2/OneToTwo 2.png" },
+  otw_03: { id: "otw_03", type: "One to Two", imageFile: "assets/set_2/OneToTwo 3.png" },
+  oth_01: { id: "oth_01", type: "One to Three", imageFile: "assets/set_2/OneToThree 1.png" },
+  oth_02: { id: "oth_02", type: "One to Three", imageFile: "assets/set_2/OneToThree 2.png" },
+  oth_03: { id: "oth_03", type: "One to Three", imageFile: "assets/set_2/OneToThree 3.png" }
+};
+
+console.log(tiles);
+
 
 
 const assets = [
@@ -171,24 +197,50 @@ function drawUI() {
 function setup() {
   createCanvas(canvasSize.width, canvasSize.height);
   background(220);
-  noStroke()
+  noStroke();
 
-  // Update cells initialization for 2D array with columns and rows
-  cells = Array(columns).fill().map(() => Array(rows));
+  // Load and parse the configuration
+  loadJSON('config.json', (config) => {
+    const currentConfig = config.config_1;
 
-  // First pass: assign colors
-  for (let i = 0; i < columns; i++) {
-    for (let j = 0; j < rows; j++) {
-      cells[i][j] = new Cell(
-        i * cellSize + gutterSize,
-        j * cellSize + gutterSize,
-        cellSize - gutterSize * 2,
-        0,
-        null
-      );
-      cells[i][j].draw();
+    // Initialize cells arrays for both front and back
+    cells = Array(columns).fill().map(() => Array(rows));
+    backCells = Array(columns).fill().map(() => Array(rows));
+
+    // Initialize cells with configured images
+    for (let i = 0; i < columns; i++) {
+      for (let j = 0; j < rows; j++) {
+        const key = `${i},${j}`;
+        const configData = currentConfig[key];
+
+        // Front grid (left side)
+        const frontTileData = tiles[configData.front];
+        const frontImageIndex = assets.indexOf(frontTileData.imageFile);
+        cells[i][j] = new Cell(
+          i * cellSize + gutterSize,
+          j * cellSize + gutterSize,
+          cellSize - gutterSize * 2,
+          0,
+          images[frontImageIndex]
+        );
+        cells[i][j].draw();
+
+        // Back grid (right side, flipped horizontally)
+        const backTileData = tiles[configData.back];
+        const backImageIndex = assets.indexOf(backTileData.imageFile);
+        // Position the back cells starting from the right side
+        const backX = canvasSize.width / 2 + ((columns - 1 - i) * cellSize);
+        backCells[i][j] = new Cell(
+          backX + gutterSize,
+          j * cellSize + gutterSize,
+          cellSize - gutterSize * 2,
+          0,
+          images[backImageIndex]
+        );
+        backCells[i][j].draw();
+      }
     }
-  }
+  });
 
   drawUI();
 }
@@ -459,29 +511,54 @@ function updateImageCounts() {
 function mousePressed() {
   if (mouseX < 0 || mouseX > canvasSize.width || mouseY < 0 || mouseY > canvasSize.height) return;
 
-  const i = Math.floor(mouseX / cellSize);
-  const j = Math.floor(mouseY / cellSize);
+  // Determine which grid was clicked
+  const isBackGrid = mouseX >= canvasSize.width / 2;
 
-  if (isDeleting) {
-    cells[i][j].imageObject = null;
-    cells[i][j].rotation = 0;
-  }
-  else if (isRotating) {
-    cells[i][j].rotation = (cells[i][j].rotation + 90) % 360;
-  }
-  else {
-    cells[i][j].imageObject = images[activeImageIndex];
+  if (isBackGrid) {
+    // Calculate index for back grid (reversed horizontally)
+    const i = columns - 1 - Math.floor((mouseX - canvasSize.width / 2) / cellSize);
+    const j = Math.floor(mouseY / cellSize);
+
+    if (i >= 0 && i < columns && j >= 0 && j < rows) {
+      if (isDeleting) {
+        backCells[i][j].imageObject = null;
+        backCells[i][j].rotation = 0;
+      }
+      else if (isRotating) {
+        backCells[i][j].rotation = (backCells[i][j].rotation + 90) % 360;
+      }
+      else {
+        backCells[i][j].imageObject = images[activeImageIndex];
+      }
+    }
+  } else {
+    // Handle front grid (original logic)
+    const i = Math.floor(mouseX / cellSize);
+    const j = Math.floor(mouseY / cellSize);
+
+    if (i >= 0 && i < columns && j >= 0 && j < rows) {
+      if (isDeleting) {
+        cells[i][j].imageObject = null;
+        cells[i][j].rotation = 0;
+      }
+      else if (isRotating) {
+        cells[i][j].rotation = (cells[i][j].rotation + 90) % 360;
+      }
+      else {
+        cells[i][j].imageObject = images[activeImageIndex];
+      }
+    }
   }
 
-  // Redraw the canvas
+  // Redraw both grids
   background(220);
   for (let x = 0; x < columns; x++) {
     for (let y = 0; y < rows; y++) {
       cells[x][y].draw();
+      backCells[x][y].draw();
     }
   }
 
-  // Update the counts
   updateImageCounts();
 }
 
@@ -492,6 +569,9 @@ function keyPressed() {
   if (key === 'd' || key === 'D') {
     isDeleting = true;
   }
+  if (key === 'f' || key === 'F') {
+    isFlipping = true;
+  }
 }
 
 function keyReleased() {
@@ -500,6 +580,9 @@ function keyReleased() {
   }
   if (key === 'd' || key === 'D') {
     isDeleting = false;
+  }
+  if (key === 'f' || key === 'F') {
+    isFlipping = false;
   }
 }
 
